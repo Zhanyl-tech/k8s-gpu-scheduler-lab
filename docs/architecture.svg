@@ -1,0 +1,115 @@
+<svg width="1200" height="700" viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ttl dsc">
+<title id="ttl">k8s-gpu-scheduler-lab: what is real and what is simulated</title>
+<desc id="dsc">A left-to-right pipeline. A seeded workload trace and a heterogeneous fleet definition feed a kind cluster. Inside the cluster, the control plane, the scheduler under test, and every binding decision are real; the GPU nodes are kwok objects with no kubelet and no hardware. Pod bindings and sampled free-GPU counts are recorded as an observation, which is scored into makespan, wait times, two fragmentation definitions, gang deadlock rate and fairness. The runner, not kwok, deletes each pod when its trace duration elapses.</desc>
+
+<defs>
+  <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#58a6ff"/>
+  </marker>
+  <marker id="arg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#7d8894"/>
+  </marker>
+</defs>
+
+<rect width="1200" height="700" fill="#141a23"/>
+
+<rect width="1200" height="86" fill="#1c2431"/>
+<rect width="6" height="86" fill="#f5b544"/>
+<text x="44" y="38" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="25" font-weight="700" fill="#e9eff5">k8s-gpu-scheduler-lab &#8212; what is measured, and what is simulated</text>
+<text x="44" y="66" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="14.5" fill="#828c98">The control plane, the scheduler and every binding decision are real. The GPUs are not.</text>
+
+<!-- ============ COLUMN 1: INPUTS ============ -->
+<text x="52" y="132" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="11.5" letter-spacing="1.3" font-weight="700" fill="#828c98">INPUTS</text>
+
+<rect x="52" y="150" width="222" height="118" rx="5" fill="#1c2431" stroke="#262d38" stroke-width="1.5"/>
+<rect x="52" y="150" width="4" height="118" rx="2" fill="#58a6ff"/>
+<text x="74" y="176" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="15" font-weight="700" fill="#e9eff5">workload trace</text>
+<text x="74" y="199" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#828c98">800 jobs &#183; 1201 pods</text>
+<text x="74" y="219" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#828c98">18% gangs &#183; seeded</text>
+<text x="74" y="245" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12" fill="#7d8894">Phase 2: translated sacct,</text>
+<text x="74" y="261" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12" fill="#7d8894">same record schema</text>
+
+<rect x="52" y="292" width="222" height="104" rx="5" fill="#1c2431" stroke="#262d38" stroke-width="1.5"/>
+<rect x="52" y="292" width="4" height="104" rx="2" fill="#58a6ff"/>
+<text x="74" y="318" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="15" font-weight="700" fill="#e9eff5">fleet.yaml</text>
+<text x="74" y="341" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#828c98">12&#215;8 + 8&#215;4 + 6&#215;2 GPU</text>
+<text x="74" y="361" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#828c98">26 nodes &#183; 140 GPUs</text>
+<text x="74" y="385" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12" fill="#7d8894">heterogeneous on purpose</text>
+
+<line x1="284" y1="272" x2="330" y2="272" stroke="#58a6ff" stroke-width="2" marker-end="url(#ar)"/>
+
+<!-- ============ COLUMN 2: THE CLUSTER ============ -->
+<text x="344" y="132" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="11.5" letter-spacing="1.3" font-weight="700" fill="#828c98">KIND CLUSTER</text>
+
+<rect x="344" y="150" width="416" height="396" rx="6" fill="#171e29" stroke="#2b3444" stroke-width="1.5"/>
+
+<!-- REAL half -->
+<rect x="364" y="172" width="376" height="176" rx="5" fill="#1c2431" stroke="#f5b544" stroke-width="1.6"/>
+<text x="384" y="196" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="11.5" letter-spacing="1.3" font-weight="700" fill="#f5b544">REAL</text>
+<text x="384" y="222" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="14.5" font-weight="700" fill="#e9eff5">scheduler under test</text>
+<text x="384" y="245" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#79c0ff">K0 kube-scheduler</text>
+<text x="384" y="264" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#7d8894">K1 Kueue &#183; K2 Volcano</text>
+<text x="384" y="283" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#7d8894">K3 NVIDIA pack &#183; K4 KAI</text>
+<line x1="384" y1="296" x2="720" y2="296" stroke="#2b3444" stroke-width="1.2"/>
+<text x="384" y="317" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12.5" fill="#adb8c4">API server &#183; Pod + Node objects</text>
+<text x="384" y="336" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12.5" fill="#adb8c4">quota &#183; priority admission &#183; bindings</text>
+
+<!-- SIMULATED half -->
+<rect x="364" y="368" width="376" height="156" rx="5" fill="#1a212c" stroke="#3a4658" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="384" y="392" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="11.5" letter-spacing="1.3" font-weight="700" fill="#7d8894">SIMULATED</text>
+<text x="384" y="418" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="14.5" font-weight="700" fill="#adb8c4">kwok nodes</text>
+<text x="384" y="441" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#828c98">advertise nvidia.com/gpu</text>
+<text x="384" y="463" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12.5" fill="#7d8894">no kubelet &#183; no CUDA &#183; no NCCL</text>
+<text x="384" y="482" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12.5" fill="#7d8894">no contention &#183; no thermals</text>
+<text x="384" y="507" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12" fill="#6e7885">pod-complete / pod-delete stages removed</text>
+
+<line x1="552" y1="348" x2="552" y2="366" stroke="#7d8894" stroke-width="1.6" marker-end="url(#arg)"/>
+<text x="562" y="362" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="11.5" fill="#7d8894">binds onto</text>
+
+<line x1="770" y1="272" x2="816" y2="272" stroke="#58a6ff" stroke-width="2" marker-end="url(#ar)"/>
+
+<!-- ============ COLUMN 3: MEASUREMENT ============ -->
+<text x="830" y="132" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="11.5" letter-spacing="1.3" font-weight="700" fill="#828c98">MEASUREMENT</text>
+
+<rect x="830" y="150" width="318" height="112" rx="5" fill="#1c2431" stroke="#262d38" stroke-width="1.5"/>
+<rect x="830" y="150" width="4" height="112" rx="2" fill="#58a6ff"/>
+<text x="852" y="176" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="15" font-weight="700" fill="#e9eff5">observation</text>
+<text x="852" y="199" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12.5" fill="#adb8c4">per-pod bind / start / end</text>
+<text x="852" y="219" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12.5" fill="#adb8c4">sampled free GPUs per node</text>
+<text x="852" y="243" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12" fill="#7d8894">preempted pods recorded, not lost</text>
+
+<line x1="989" y1="272" x2="989" y2="296" stroke="#58a6ff" stroke-width="2" marker-end="url(#ar)"/>
+
+<rect x="830" y="302" width="318" height="152" rx="5" fill="#1c2431" stroke="#262d38" stroke-width="1.5"/>
+<rect x="830" y="302" width="4" height="152" rx="2" fill="#3fb950"/>
+<text x="852" y="328" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="15" font-weight="700" fill="#e9eff5">metrics</text>
+<text x="852" y="351" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12.5" fill="#adb8c4">makespan &#183; mean and p95 wait</text>
+<text x="852" y="371" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12.5" fill="#adb8c4">fragmentation &#8212; two definitions</text>
+<text x="852" y="391" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12.5" fill="#adb8c4">gang deadlock rate &#183; fairness</text>
+<line x1="852" y1="404" x2="1128" y2="404" stroke="#262d38" stroke-width="1.2"/>
+<text x="852" y="425" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12" fill="#7d8894">A: queue-relative &#8212; reads 0.0% for</text>
+<text x="852" y="442" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12" fill="#7d8894">D-largest. B: fixed reference &#8212; 55.6%.</text>
+
+<line x1="989" y1="454" x2="989" y2="478" stroke="#58a6ff" stroke-width="2" marker-end="url(#ar)"/>
+
+<rect x="830" y="484" width="318" height="62" rx="5" fill="#1c2431" stroke="#262d38" stroke-width="1.5"/>
+<rect x="830" y="484" width="4" height="62" rx="2" fill="#f5b544"/>
+<text x="852" y="510" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="15" font-weight="700" fill="#e9eff5">results table</text>
+<text x="852" y="532" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12" fill="#7d8894">every row carries cluster / model</text>
+
+<!-- ============ BOTTOM BAND: lifetime control + baselines ============ -->
+<rect x="52" y="572" width="1096" height="106" rx="5" fill="#1a212c" stroke="#2b3444" stroke-width="1.5"/>
+<rect x="52" y="572" width="4" height="106" rx="2" fill="#f5b544"/>
+<line x1="684" y1="592" x2="684" y2="658" stroke="#2b3444" stroke-width="1.2"/>
+
+<text x="76" y="598" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="11.5" letter-spacing="1.3" font-weight="700" fill="#f5b544">THE RUNNER OWNS JOB LIFETIME</text>
+<text x="76" y="622" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="13" fill="#adb8c4">A pod holds its GPUs for exactly the duration the trace assigned,</text>
+<text x="76" y="641" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="13" fill="#adb8c4">then the runner deletes it. kwok&#8217;s own retire stages are removed at</text>
+<text x="76" y="660" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="13" fill="#adb8c4">setup: leaving them in frees GPUs early and inflates utilization.</text>
+
+<text x="712" y="598" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="11.5" letter-spacing="1.3" font-weight="700" fill="#828c98">DEGENERATE BASELINES</text>
+<text x="712" y="622" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#828c98">D-fifo &#183; D-random &#183; D-largest</text>
+<text x="712" y="641" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12.5" fill="#7d8894">In every results table. A configuration that does</text>
+<text x="712" y="660" font-family="ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12.5" fill="#7d8894">not beat D-random has not been shown to schedule.</text>
+
+</svg>

@@ -11,6 +11,11 @@ trace. That comparison is the product.
 > KAI/DRA are not built yet, and their rows in the results table are empty.
 > Published as it is built.
 
+<p align="center">
+  <img src="./docs/architecture.svg" width="100%"
+       alt="Pipeline: a seeded workload trace and a heterogeneous fleet definition feed a kind cluster. Inside it, the control plane, the scheduler under test and every binding decision are real; the GPU nodes are kwok objects with no kubelet and no hardware. Pod bindings and sampled free-GPU counts become an observation, scored into makespan, waits, two fragmentation definitions, gang deadlock rate and fairness. The runner, not kwok, deletes each pod when its trace duration elapses.">
+</p>
+
 ---
 
 ## The thesis
