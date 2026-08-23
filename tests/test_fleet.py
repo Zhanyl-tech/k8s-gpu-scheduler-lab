@@ -67,3 +67,18 @@ def test_unknown_node_raises() -> None:
     fleet = Fleet("t", (NodeClass("a", 1, 8),))
     with pytest.raises(KeyError):
         fleet.gpus_of("nope-0")
+
+
+@pytest.mark.parametrize("path", sorted(FLEETS.glob("*.yaml")), ids=lambda p: p.name)
+def test_every_shipped_fleet_renders_to_valid_nodes(path: Path) -> None:
+    """A fleet that renders badly breaks `make up` with an opaque kubectl error."""
+    import yaml
+
+    from k8slab.fleet import render_yaml
+
+    docs = [d for d in yaml.safe_load_all(render_yaml(load(path))) if d]
+    assert docs
+    for doc in docs:
+        assert doc["kind"] == "Node"
+        assert "nvidia.com/gpu" in doc["status"]["capacity"]
+        assert doc["metadata"]["annotations"]["kwok.x-k8s.io/node"] == "fake"

@@ -23,28 +23,3 @@ jobs:
       # policies and the metrics — everything except the runner, which needs a
       # control plane. `make bench` is the integration test and runs locally.
       - run: pytest -q
-
-  fleet-renders:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install -e ".[dev]"
-      # A fleet that does not render to valid Node objects breaks `make up`
-      # with a kubectl error that says nothing useful.
-      - name: every fleet renders to parseable manifests
-        run: |
-          for f in fleets/*.yaml; do
-            echo "-- $f"
-            k8slab nodes --fleet "$f" | python -c "
-import sys, yaml
-docs = [d for d in yaml.safe_load_all(sys.stdin) if d]
-assert docs, 'no manifests rendered'
-for d in docs:
-    assert d['kind'] == 'Node', d['kind']
-    assert 'nvidia.com/gpu' in d['status']['capacity']
-print(f'  {len(docs)} nodes ok')
-"
-          done
