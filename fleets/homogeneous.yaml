@@ -1,0 +1,15 @@
+# A control fleet: every node identical.
+#
+# Exists so the fragmentation metric can be shown to report near-zero where
+# fragmentation is structurally impossible. If it does not, the metric is wrong.
+#
+# 17x8 = 136 GPUs against the default fleet's 140. They cannot be made equal
+# with 8-GPU nodes only; compare fragmentation as a *rate*, never as a raw
+# GPU-hour count, when using this fleet as a control.
+name: homogeneous
+nodeClasses:
+  - name: dgx8
+    count: 17
+    gpus: 8
+    cpus: 96
+    memoryGi: 1024

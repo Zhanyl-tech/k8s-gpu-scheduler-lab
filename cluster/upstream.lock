@@ -1,0 +1,26 @@
+# The exact upstream this lab is pinned to.
+#
+# Scheduler behaviour changes across minor versions — bin-packing heuristics,
+# gang-admission semantics and DRA support have all moved recently. A benchmark
+# that floats on a moving base produces numbers that cannot be compared across
+# time. Bump these deliberately, and treat any bump as a breaking change to
+# every published result.
+#
+# `verified` records whether a green `make bench` has actually been observed on
+# this combination — not whether the version exists. It is false until a run
+# proves otherwise, on the same principle as slurm-rca-bench's `measured:` flag.
+
+[substrate]
+kind        = v0.27.0
+kind_image  = kindest/node:v1.32.2@sha256:f226345927d7e348497136874b6d207e0b32cc52154ad8323129352923a3142f
+kubernetes  = v1.32.2
+kwok        = v0.8.0
+verified    = true    # make up + make bench, 4 configs green, 2026-08-23
+
+# Phase 2. Recorded now so the versions a future result refers to are already
+# written down rather than reconstructed afterwards.
+[planned]
+kueue       = v0.19.2
+volcano     = v1.15.1
+kai         = unpinned   # NVIDIA KAI scheduler; version chosen when K4 is built
+dra_driver  = unpinned   # k8s-dra-driver-gpu; pinned with K4

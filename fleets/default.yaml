@@ -1,0 +1,26 @@
+# The default fleet: deliberately heterogeneous.
+#
+# Fragmentation is only measurable when nodes have different shapes. A fleet of
+# identical 8-GPU nodes cannot strand capacity in a way a bin-packer could have
+# avoided, so a homogeneous fleet would report ~0 fragmentation for every
+# scheduler and prove nothing.
+#
+# 26 nodes / 140 GPUs (12x8 + 8x4 + 6x2) — small enough that kwok and the API server stay
+# comfortable on a laptop, large enough that packing decisions diverge.
+name: default
+nodeClasses:
+  - name: dgx8
+    count: 12
+    gpus: 8
+    cpus: 96
+    memoryGi: 1024
+  - name: mid4
+    count: 8
+    gpus: 4
+    cpus: 48
+    memoryGi: 512
+  - name: edge2
+    count: 6
+    gpus: 2
+    cpus: 24
+    memoryGi: 128
