@@ -1,15 +1,28 @@
 # A control fleet: every node identical.
 #
-# Exists so the fragmentation metric can be shown to report near-zero where
-# fragmentation is structurally impossible. If it does not, the metric is wrong.
+# Exists so that a workload of WHOLE-NODE jobs can be shown to report exactly
+# zero structural fragmentation (definition C, node level), which is
+# structurally forced here. If it does not, the metric is wrong. Under the
+# default MIXED trace it is not near zero: 1-, 2- and 4-GPU jobs leave 8-GPU
+# nodes partly allocated. Definition B then reads lower than on the default
+# fleet, but C-node reads higher (docs/metrics.md, "The control").
 #
 # 17x8 = 136 GPUs against the default fleet's 140. They cannot be made equal
 # with 8-GPU nodes only; compare fragmentation as a *rate*, never as a raw
 # GPU-hour count, when using this fleet as a control.
+#
+# The topology below changes no node's shape, so the control property holds:
+# definitions B and C-node still see one node shape. Racks of 4 as in the
+# default fleet (the fifth rack holds the 17th node alone), two racks per
+# switch -> rack-0..rack-4 under switch-0..switch-2. Declared, not measured.
 name: homogeneous
+topology:
+  racksPerSwitch: 2
 nodeClasses:
   - name: dgx8
     count: 17
     gpus: 8
     cpus: 96
     memoryGi: 1024
+    nvlink: true
+    nodesPerRack: 4

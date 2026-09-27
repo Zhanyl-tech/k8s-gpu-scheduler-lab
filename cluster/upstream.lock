@@ -16,6 +16,25 @@ kind_image  = kindest/node:v1.32.2@sha256:f226345927d7e348497136874b6d207e0b32cc
 kubernetes  = v1.32.2
 kwok        = v0.8.0
 verified    = true    # make up + make bench, 4 configs green, 2026-08-23
+                      # -- with the Phase 1 cluster/kind.yaml, i.e. BEFORE the
+                      # generated scheduler configuration below existed.
+
+# Phase 2: kube-scheduler runs with a generated KubeSchedulerConfiguration
+# (backoff scaled to SPEEDUP), mounted through kind extraMounts and kubeadm
+# scheduler extraVolumes, plus --leader-elect=false and
+# --pod-max-in-unschedulable-pods-duration; kwok's pod-ready Stage gets a delay
+# patch when STARTUP_DELAY is set. Field names, flag semantics, kind's
+# relative-hostPath handling and the kwok Stage delay fields were checked
+# against the pinned upstream SOURCE on 2026-09-26 (citations in
+# src/k8slab/timescale.py, src/k8slab/clusterconfig.py and cluster/kind.yaml).
+# No cluster has been brought up with this combination: no Docker daemon or
+# kind binary was available. Until a green `make up` + `make bench` is
+# observed, nothing about it is verified.
+[scheduler_config]
+config_api  = kubescheduler.config.k8s.io/v1
+kubeadm_api = kubeadm.k8s.io/v1beta3   # what kind v0.27.0 generates for 1.32
+kwok_stage  = kwok.x-k8s.io/v1alpha1 pod-ready, spec.delay (merge patch)
+verified    = false   # no run observed with the generated scheduler config
 
 # Phase 2. Recorded now so the versions a future result refers to are already
 # written down rather than reconstructed afterwards.

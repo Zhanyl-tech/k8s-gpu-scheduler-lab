@@ -20,6 +20,39 @@ jobs:
       - run: ruff check .
       - run: mypy
       # No cluster in CI. These exercise the fleet loader, the trace schema, the
-      # policies and the metrics — everything except the runner, which needs a
-      # control plane. `make bench` is the integration test and runs locally.
+      # policies, the queue model, the metrics and the runner -- the runner
+      # against a fake API server (tests/test_runner.py), which proves its
+      # accounting, not its behaviour on a real control plane. `make bench` is
+      # the integration test and runs locally.
       - run: pytest -q
+
+  bench-model:
+    # The whole reference-model pipeline, end to end, through the same Makefile
+    # target a user runs: repeats, the kube queue model, aggregation, the
+    # bootstrap, and both results files. Small on purpose (light profile, two
+    # repeats): it proves the plumbing, not any result. No --fail-on-unstable:
+    # D-random is expected to vary across repeats.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: make bench-model REPEAT=2 PROFILE=light MODEL_RESULTS=ci-results
+      - name: results files are complete and well-formed
+        run: |
+          .venv/bin/python - <<'EOF'
+          import json
+          doc = json.load(open("ci-results/results.json"))
+          assert doc["schema"] == 3, doc["schema"]
+          configs = {c["config"]: c for c in doc["configs"]}
+          assert set(configs) == {"D-fifo", "D-random", "D-largest", "D-preempt"}, configs
+          assert all(c["n"] == 2 and c["src"] == "model" for c in configs.values())
+          assert configs["D-fifo"]["verdict"] == "deterministic"
+          assert doc["harness"]["queue_model"] == "kube"
+          assert doc["timescale"]["backoff_residual_error_sim_seconds"] == 50.0
+          assert doc["comparisons"], "no pairwise comparisons were computed"
+          md = open("ci-results/results.md").read()
+          assert "## Execution layer" in md and "## How these runs were produced" in md
+          print("results.json schema", doc["schema"], "configs", sorted(configs))
+          EOF

@@ -3,12 +3,42 @@
 # Every "GPU node" in this lab is a kwok node: an API object with no kubelet
 # behind it. The control plane is real, the scheduling decisions are real, the
 # hardware is not. See docs/limitations.md.
+#
+# Phase 2: kube-scheduler runs with a generated KubeSchedulerConfiguration
+# whose backoff is scaled to the replay's --speedup (src/k8slab/timescale.py).
+# `make up` writes it to cluster/generated/ (gitignored) and creates the
+# cluster from cluster/generated/kind.yaml: THIS file plus the one
+# speedup-dependent flag, --pod-max-in-unschedulable-pods-duration, which is
+# not a configuration-file field. Create the cluster with `make up`, not with
+# `kind create cluster --config cluster/kind.yaml`, or the scheduler will have
+# no configuration file to read.
+#
+# Verified against upstream source (read 2026-09-26), NOT yet by a run:
+# * kind v0.27.0 generates kubeadm.k8s.io/v1beta3 for Kubernetes >= 1.23, where
+#   ClusterConfiguration.scheduler.extraArgs is a map and extraVolumes a list of
+#   HostPathMount {name, hostPath, mountPath, readOnly, pathType}
+#   (kind pkg/cluster/internal/kubeadm/config.go; kubernetes v1.32.2
+#   cmd/kubeadm/app/apis/kubeadm/v1beta3/types.go).
+# * With --config, kube-scheduler ignores --kubeconfig and --kube-api-qps/burst
+#   but still applies --leader-elect, which kubeadm sets to "true"
+#   (cmd/kube-scheduler/app/options/*.go, cmd/kubeadm/app/phases/controlplane/
+#   manifests.go). Hence leader-elect below, and kubeconfig/qps/burst in the
+#   generated file instead of flags.
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: k8slab
 nodes:
   - role: control-plane
     image: kindest/node:v1.32.2@sha256:f226345927d7e348497136874b6d207e0b32cc52154ad8323129352923a3142f
+    # kind's docker provider resolves a relative hostPath with filepath.Abs,
+    # i.e. against the directory `kind create cluster` runs in -- the repo root
+    # under `make up` (kind v0.27.0 pkg/cluster/internal/providers/docker/
+    # provision.go). The directory, not the file, is mounted: a bind-mounted
+    # file pins one inode and would not follow a regenerated file.
+    extraMounts:
+      - hostPath: cluster/generated
+        containerPath: /etc/kubernetes/k8slab
+        readOnly: true
     kubeadmConfigPatches:
       - |
         kind: ClusterConfiguration
@@ -25,5 +55,15 @@ nodes:
             kube-api-burst: "400"
         scheduler:
           extraArgs:
-            kube-api-qps: "200"
-            kube-api-burst: "400"
+            # The generated, speedup-scaled KubeSchedulerConfiguration. Its
+            # clientConnection carries qps 200 / burst 400 (the Phase 1 flags,
+            # which --config would silently ignore).
+            config: /etc/kubernetes/k8slab/scheduler-config.yaml
+            # kubeadm passes --leader-elect=true, which overrides the file.
+            leader-elect: "false"
+          extraVolumes:
+            - name: k8slab-config
+              hostPath: /etc/kubernetes/k8slab
+              mountPath: /etc/kubernetes/k8slab
+              readOnly: true
+              pathType: Directory

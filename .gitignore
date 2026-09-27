@@ -9,3 +9,5 @@ results-model/
 dist/
 build/
 .DS_Store
+cluster/generated/
+*.tmp
