@@ -933,3 +933,16 @@ def test_extend_stretches_nothing_until_the_last_gang_member_is_bound() -> None:
         m.gpu_hours_demanded + m.topology_extension_gpu_hours, rel=1e-12)
     assert set(obs.extension_by_account) == {"b"}
     assert m.fairness_ratio == pytest.approx(1.0, rel=1e-12)
+
+
+def test_pod_manifest_kueue_and_volcano_gangs():
+    from k8slab.runner import pod_manifest
+
+    gang = Job(job_id=7, account="a", submit_time=0.0, duration=60.0, gpus=8, gang_size=4, priority=0)
+    k1 = pod_manifest(gang, 0, "K1", "ns")
+    assert k1["spec"]["schedulerName"] == "default-scheduler"
+    assert k1["metadata"]["labels"]["kueue.x-k8s.io/pod-group-name"] == "k8slab-j7"
+    assert k1["metadata"]["annotations"]["kueue.x-k8s.io/pod-group-total-count"] == "4"
+    k2 = pod_manifest(gang, 0, "K2", "ns")
+    assert k2["spec"]["schedulerName"] == "volcano"
+    assert k2["metadata"]["annotations"]["scheduling.k8s.io/group-name"] == "k8slab-j7"

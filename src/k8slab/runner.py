@@ -143,6 +143,9 @@ class KubernetesApi:
             name, namespace, grace_period_seconds=grace_period_seconds
         )
 
+    def patch_namespaced_pod_status(self, name: str, namespace: str, body: dict[str, Any]) -> Any:
+        return self._core.patch_namespaced_pod_status(name, namespace, body)
+
 
 @dataclass
 class RunConfig:
@@ -172,7 +175,32 @@ def _scheduler_name(config: str) -> str:
     is exactly what we want: the binder in this process is that scheduler, and
     kube-scheduler must not race it.
     """
-    return "default-scheduler" if config == "K0" else f"k8slab-{config.lower()}"
+    if config in ("K0", "K1"):
+        # K1 (Kueue) gates admission on quota; kube-scheduler still does the
+        # binding once the gate lifts.
+        return "default-scheduler"
+    if config == "K2":
+        return "volcano"
+    return f"k8slab-{config.lower()}"
+
+
+KUEUE_QUEUE_NAME = "k8slab-queue"
+
+
+def pod_group_name(job: Job) -> str:
+    return f"k8slab-j{job.job_id}"
+
+
+def _volcano_gang_spec(job: Job) -> dict[str, Any]:
+    # minResources left unset so Volcano gates on member count alone, not on a
+    # second quota-shaped check.
+    return {"minMember": job.gang_size, "queue": "default"}
+
+
+#: Gang CRD per externally-scheduled config: group, version, spec builder.
+_GANG_CRD: dict[str, tuple[str, str, Callable[[Job], dict[str, Any]]]] = {
+    "K2": ("scheduling.volcano.sh", "v1beta1", _volcano_gang_spec),
+}
 
 
 def priority_class_name(priority: int) -> str:
@@ -189,20 +217,34 @@ def pod_name(job_id: int, index: int, attempt: int = 0) -> str:
 def pod_manifest(
     job: Job, index: int, config: str, namespace: str, attempt: int = 0
 ) -> dict[str, Any]:
+    labels = {
+        "k8slab.io/job": str(job.job_id),
+        "k8slab.io/pod-index": str(index),
+        "k8slab.io/attempt": str(attempt),
+        "k8slab.io/account": job.account,
+        "k8slab.io/gang-size": str(job.gang_size),
+        "k8slab.io/config": config,
+    }
+    annotations: dict[str, str] = {}
+    if config == "K1":
+        # A gang is a Kueue pod group: Kueue admits all members atomically.
+        labels["kueue.x-k8s.io/queue-name"] = KUEUE_QUEUE_NAME
+        if job.gang_size > 1:
+            labels["kueue.x-k8s.io/pod-group-name"] = pod_group_name(job)
+            annotations["kueue.x-k8s.io/pod-group-total-count"] = str(job.gang_size)
+    if config == "K2" and job.gang_size > 1:
+        # Volcano's own pg-controller would mint one minMember-1 PodGroup per
+        # bare pod, which is not a gang, so point the pods at ours.
+        labels["pod-group-name"] = pod_group_name(job)
+        annotations["scheduling.k8s.io/group-name"] = pod_group_name(job)
     return {
         "apiVersion": "v1",
         "kind": "Pod",
         "metadata": {
             "name": pod_name(job.job_id, index, attempt),
             "namespace": namespace,
-            "labels": {
-                "k8slab.io/job": str(job.job_id),
-                "k8slab.io/pod-index": str(index),
-                "k8slab.io/attempt": str(attempt),
-                "k8slab.io/account": job.account,
-                "k8slab.io/gang-size": str(job.gang_size),
-                "k8slab.io/config": config,
-            },
+            "labels": labels,
+            **({"annotations": annotations} if annotations else {}),
         },
         "spec": {
             "schedulerName": _scheduler_name(config),
@@ -435,6 +477,35 @@ class Runner:
                 )
             self.sleep(TICK)
 
+    def _ensure_pod_groups(self) -> None:
+        """Create one PodGroup per gang job so the external scheduler gangs it.
+
+        The lab submits bare Pods, so no controller derives a PodGroup for it.
+        """
+        if self.cfg.config not in _GANG_CRD:
+            return
+        group, version, spec_of = _GANG_CRD[self.cfg.config]
+        from kubernetes import client
+        from kubernetes.client.exceptions import ApiException
+
+        api = client.CustomObjectsApi()
+        for job in self.jobs:
+            if job.gang_size <= 1:
+                continue
+            body = {
+                "apiVersion": f"{group}/{version}",
+                "kind": "PodGroup",
+                "metadata": {"name": pod_group_name(job), "namespace": self.cfg.namespace},
+                "spec": spec_of(job),
+            }
+            try:
+                api.create_namespaced_custom_object(
+                    group, version, self.cfg.namespace, "podgroups", body
+                )
+            except ApiException as exc:
+                if exc.status != 409:
+                    raise
+
     def _log(self, msg: str) -> None:
         if not self.cfg.quiet:
             print(msg, flush=True)
@@ -446,6 +517,7 @@ class Runner:
         self._ensure_priority_classes(api)
         topo = self._read_topology(api)
         self._cleanup(api)
+        self._ensure_pod_groups()
 
         speedup = self.cfg.speedup
         capacity = {n: self.fleet.gpus_of(n) for n in self.fleet.node_names()}
@@ -852,6 +924,8 @@ class Runner:
             end = attempt.end
             if end > sim_now:
                 continue
+            if self.cfg.config == "K1":
+                _mark_succeeded(api, self.cfg.namespace, track.name, sleep=self.sleep)
             _delete(api, self.cfg.namespace, track.name, sleep=self.sleep)
             track.ended = True
             # The job ran for exactly its trace duration from the poll that saw
@@ -918,6 +992,21 @@ def _bind(
     except Exception as exc:
         # 409 means someone bound it first; harmless and expected under races.
         if _status_of(exc) not in (404, 409):
+            raise
+
+
+def _mark_succeeded(
+    api: Any, namespace: str, name: str, sleep: Callable[[float], None] = time.sleep
+) -> None:
+    """Kueue frees ClusterQueue quota only once a pod reaches a terminal phase,
+    which a raw delete never sets."""
+    try:
+        _retry(
+            api.patch_namespaced_pod_status, name, namespace,
+            {"status": {"phase": "Succeeded"}}, sleep=sleep,
+        )
+    except Exception as exc:
+        if _status_of(exc) != 404:
             raise
 
 
