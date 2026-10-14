@@ -139,3 +139,16 @@ def test_rejects_malformed_topology(tmp_path: Path, body: str, match: str) -> No
 def test_max_node_gpus() -> None:
     assert load(FLEETS / "default.yaml").max_node_gpus == 8
     assert Fleet("t", (NodeClass("a", 1, 2), NodeClass("b", 1, 4))).max_node_gpus == 4
+
+
+def test_render_kueue_queue_sizes_quota_to_fleet() -> None:
+    from k8slab.fleet import render_kueue_queue
+
+    fleet = load("fleets/default.yaml")
+    queue = next(d for d in render_kueue_queue(fleet) if d["kind"] == "ClusterQueue")
+    gpus = next(
+        r["nominalQuota"]
+        for r in queue["spec"]["resourceGroups"][0]["flavors"][0]["resources"]
+        if r["name"] == "nvidia.com/gpu"
+    )
+    assert gpus == sum(c.count * c.gpus for c in fleet.classes)
