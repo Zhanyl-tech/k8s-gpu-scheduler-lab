@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from . import clusterconfig, sim, trace
 from . import fleet as fleet_mod
 from . import metrics as metrics_mod
@@ -83,6 +85,13 @@ def main(argv: list[str] | None = None) -> int:
 
     p_nodes = sub.add_parser("nodes", help="render kwok Node manifests for a fleet")
     p_nodes.add_argument("--fleet", default=DEFAULT_FLEET)
+
+    p_kqueue = sub.add_parser(
+        "kueue-queue", help="render Kueue ResourceFlavor/ClusterQueue/LocalQueue for a fleet"
+    )
+    p_kqueue.add_argument("--fleet", default=DEFAULT_FLEET)
+    p_kqueue.add_argument("--namespace", default="k8slab")
+    p_kqueue.add_argument("--name", default="k8slab-queue")
 
     p_trace = sub.add_parser("trace", help="generate a workload trace")
     p_trace.add_argument("--profile", default="default")
@@ -196,6 +205,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "nodes":
         print(fleet_mod.render_yaml(fleet_mod.load(args.fleet)))
+        return 0
+
+    if args.cmd == "kueue-queue":
+        docs = fleet_mod.render_kueue_queue(
+            fleet_mod.load(args.fleet), namespace=args.namespace, name=args.name
+        )
+        print("\n---\n".join(yaml.safe_dump(d, sort_keys=False) for d in docs))
         return 0
 
     if args.cmd == "trace":

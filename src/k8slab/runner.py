@@ -27,6 +27,7 @@ surface, not proof of it.
 from __future__ import annotations
 
 import dataclasses
+import os
 import random
 import time
 from collections.abc import Callable
@@ -109,7 +110,8 @@ class KubernetesApi:
         from kubernetes import client
         from kubernetes import config as kconfig
 
-        kconfig.load_kube_config()
+        # None falls back to kubectl's current-context.
+        kconfig.load_kube_config(context=os.environ.get("KUBE_CONTEXT"))
         self._core = client.CoreV1Api()
         self._sched = client.SchedulingV1Api()
 

@@ -168,3 +168,53 @@ def render_nodes(fleet: Fleet) -> list[dict[str, Any]]:
 def render_yaml(fleet: Fleet) -> str:
     docs = render_nodes(fleet)
     return "\n---\n".join(yaml.safe_dump(d, sort_keys=False) for d in docs)
+
+
+def render_kueue_queue(
+    fleet: Fleet, namespace: str = "k8slab", name: str = "k8slab-queue"
+) -> list[dict[str, Any]]:
+    """ResourceFlavor + ClusterQueue + LocalQueue sized to a fleet's total capacity.
+
+    One flavor, no per-node-class split: Kueue only gates admission on
+    aggregate quota here, kube-scheduler still does real node placement
+    (nodeSelector/resources), so a single flavor is enough to demonstrate
+    quota-based admission (K1) without also modelling node-class affinity
+    Kueue itself isn't responsible for in this lab.
+    """
+    total_gpus = sum(c.count * c.gpus for c in fleet.classes)
+    total_cpus = sum(c.count * c.cpus for c in fleet.classes)
+    return [
+        {
+            "apiVersion": "kueue.x-k8s.io/v1beta2",
+            "kind": "ResourceFlavor",
+            "metadata": {"name": "default-flavor"},
+        },
+        {
+            "apiVersion": "kueue.x-k8s.io/v1beta2",
+            "kind": "ClusterQueue",
+            "metadata": {"name": f"{name}-cluster"},
+            "spec": {
+                "namespaceSelector": {},
+                "resourceGroups": [
+                    {
+                        "coveredResources": ["cpu", "nvidia.com/gpu"],
+                        "flavors": [
+                            {
+                                "name": "default-flavor",
+                                "resources": [
+                                    {"name": "cpu", "nominalQuota": total_cpus},
+                                    {"name": "nvidia.com/gpu", "nominalQuota": total_gpus},
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            },
+        },
+        {
+            "apiVersion": "kueue.x-k8s.io/v1beta2",
+            "kind": "LocalQueue",
+            "metadata": {"name": name, "namespace": namespace},
+            "spec": {"clusterQueue": f"{name}-cluster"},
+        },
+    ]
